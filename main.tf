@@ -37,7 +37,7 @@ resource "aws_instance" "EC2_Server" {
 
 resource "aws_security_group" "instance" {
 
-  name = "terraform-server-example"
+  name = "terraform_server_security_group"
 
   ingress {
     from_port   = var.server_port
@@ -48,12 +48,9 @@ resource "aws_security_group" "instance" {
 }
 
 
-output "public_ip" {
-  value = aws_instance.EC2_Server.public_ip
-  description = "The public IP address of the web server"
-}
 
-resource "aws_launch_configuration" "example" {
+
+resource "aws_launch_configuration" "ec2_collection" {
   image_id = "ami-0baa981b80a5a70f1"
   instance_type = "t2.micro"
   security_groups = [aws_security_group.instance.id]
@@ -69,7 +66,7 @@ resource "aws_launch_configuration" "example" {
 #   }
 }
 
-# get the details of default vpc
+# get the details of default vpc (virual private clod)
 data "aws_vpc" "default" {
   default = true
 }
@@ -80,8 +77,8 @@ data "aws_subnet_ids" "default_subnet_ids" {
 }
 
 resource "aws_autoscaling_group" "example" {
-  launch_configuration = aws_launch_configuration.example.name
-#   vpc_zone_identifier = data.aws_subnet_ids.default_subnet_ids.ids
+  launch_configuration = aws_launch_configuration.ec2_collection.name
+  vpc_zone_identifier = data.aws_subnet_ids.default_subnet_ids.ids
 
 #   target_group_arns = [aws_lb_target_group.asg.arn]
 #   health_check_type = "ELB"
@@ -91,7 +88,14 @@ resource "aws_autoscaling_group" "example" {
 
   tag {
     key = "Name"
-    value = "Terraform_ASG"
+    value = "Terraform_Auto_Scale_Group"
     propagate_at_launch = true
   }
+}
+
+
+
+output "public_ip" {
+  value = aws_instance.EC2_Server.public_ip
+  description = "The public IP address of the web server"
 }
