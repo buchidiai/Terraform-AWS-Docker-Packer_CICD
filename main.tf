@@ -8,7 +8,6 @@ terraform {
   }
   required_version = "1.3.9" # or latest Terraform version
 }
-
 provider "aws" {
   region = "us-east-1"
 }
@@ -21,8 +20,8 @@ variable "server_port" {
 
 #security group with ingress & egress ports setting
 resource "aws_security_group" "instance" {
-
   name = "terraform_server_security_group"
+  description = "default traffic"
 
   ingress {
     from_port   = var.server_port
@@ -34,7 +33,7 @@ resource "aws_security_group" "instance" {
 
 #security group for the application load balancer
 resource "aws_security_group" "alb" {
-  name = "terraform-example-alb"
+  name = "terraform-ec2-grp-alb"
 
   # Allow inbound HTTP requests
   ingress {
@@ -53,9 +52,25 @@ resource "aws_security_group" "alb" {
   }
 }
 
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
 # spin up ec2 instances w/ security group in auto scaling group
-resource "aws_launch_configuration" "ec2_collection" {
-  image_id = "ami-0baa981b80a5a70f1"
+resource "aws_launch_configuration" "ec2-grp" {
+  image_id = data.aws_ami.ubuntu.id
   instance_type = "t2.micro"
   security_groups = [aws_security_group.instance.id]
 
@@ -79,13 +94,16 @@ data "aws_vpc" "default" {
 
 # use the default vpc id and get the default subnets ids
 #get subnet ids by using the default vpc
-data "aws_subnet_ids" "default_subnet_ids" {
-  vpc_id = data.aws_vpc.default.id
+data "aws_subnets" "subnets" {
+  filter {
+     name   = "vpc-id"
+     values = [data.aws_vpc.default.id]
+   }
 }
 # configuration for the auto scaling group
-resource "aws_autoscaling_group" "example" {
-  launch_configuration = aws_launch_configuration.ec2_collection.name
-  vpc_zone_identifier = data.aws_subnet_ids.default_subnet_ids.ids
+resource "aws_autoscaling_group" "ec2-grp" {
+  launch_configuration = aws_launch_configuration.ec2-grp.name
+  vpc_zone_identifier = data.aws_subnets.subnets.ids
 
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
@@ -95,20 +113,20 @@ resource "aws_autoscaling_group" "example" {
 
   tag {
     key = "Name"
-    value = "Terraform_Auto_Scale_Group"
+    value = data.aws_ami.ubuntu.arn
     propagate_at_launch = true
   }
 }
 # configuration for the load balancer
-resource "aws_lb" "example" {
-  name = "Terraform_Auto_Scale_Group"
+resource "aws_lb" "ec2-grp" {
+  name = "ec2-img"
   load_balancer_type = "application"
-  subnets = data.aws_subnet_ids.default_subnet_ids.ids
+  subnets = data.aws_subnets.subnets.ids
   security_groups = [aws_security_group.alb.id]
 }
 #config for listener rule for appliaction load balancer
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.example.arn
+  load_balancer_arn = aws_lb.ec2-grp.arn
   port = 80
   protocol = "HTTP"
 
@@ -124,7 +142,7 @@ resource "aws_lb_listener" "http" {
 }
 #config for target group for appliaction load balancer
 resource "aws_lb_target_group" "asg" {
-  name = "terraform-example-target-group"
+  name = "terraform-ec2-grp-target-group"
 
   port = var.server_port
   protocol = "HTTP"
@@ -160,6 +178,6 @@ resource "aws_lb_listener_rule" "asg" {
 
 
 output "alb_dns_name" {
-  value = aws_lb.example.dns_name
+  value = aws_lb.ec2-grp.dns_name
   description = "The domain name of the load balancer"
 }
