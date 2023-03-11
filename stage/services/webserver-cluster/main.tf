@@ -11,6 +11,19 @@ terraform {
 provider "aws" {
   region = "us-east-1"
 }
+
+
+terraform {
+	backend "s3" {
+		bucket = "masterclass-bucketo"
+		key = "stage/services/webserver-cluster/terraform.tfstate"
+		region = "us-east-1"
+
+		dynamodb_table = "terraform-locks-table"
+		encrypt = true
+	}
+}
+
 #variable for port
 variable "server_port" {
   description = "The port the server will be listening on"
