@@ -11,7 +11,7 @@ terraform {
 
 variable "bucket_name" {
   description = "bucket name"
-  default = "terra-bucket-01"
+  default = "masterclass-bucketo"
   type = string
 }
 
@@ -36,8 +36,8 @@ provider "aws" {
 
 terraform {
 	backend "s3" {
-		bucket = "terra-bucket-01"
-		key = "global/s3/terraform.tfstate"
+		bucket = "masterclass-bucketo"
+		key = "global/s3/stage/terraform.tfstate"
 		region = "us-east-1"
 
 		dynamodb_table = "terraform-locks-table"

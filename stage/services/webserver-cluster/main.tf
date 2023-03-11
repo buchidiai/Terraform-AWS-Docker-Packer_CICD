@@ -15,7 +15,7 @@ provider "aws" {
 
 terraform {
 	backend "s3" {
-		bucket = "terra-bucket-01"
+		bucket = "masterclass-bucketo"
 		key = "stage/services/webserver-cluster/terraform.tfstate"
 		region = "us-east-1"
 
