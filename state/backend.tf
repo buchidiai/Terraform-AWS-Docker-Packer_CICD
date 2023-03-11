@@ -47,17 +47,19 @@ terraform {
 
 resource "aws_s3_bucket" "state_backend" {
   bucket = var.bucket_name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_acl" "state_backend" {
   bucket = aws_s3_bucket.state_backend.id
   acl    = "private"
+
 }
 resource "aws_s3_bucket_versioning" "versioning_example" {
 
   bucket = aws_s3_bucket.state_backend.id
   lifecycle {
-  	prevent_destroy = true
+  	prevent_destroy = false
   }
 
   # Enable versioning so we can see the full revision history of our
@@ -68,6 +70,8 @@ resource "aws_s3_bucket_versioning" "versioning_example" {
 
 
 }
+
+
 
 resource "aws_kms_key" "js_sdsdnk_bjsdu829-" {
   description             = "This key is used to encrypt bucket objects"
